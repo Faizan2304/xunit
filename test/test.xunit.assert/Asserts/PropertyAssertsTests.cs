@@ -1,9 +1,12 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Threading.Tasks;
-using NSubstitute;
 using Xunit;
 using Xunit.Sdk;
+
+#if NET452
+using NSubstitute;
+#endif
 
 public class PropertyAssertsTests
 {
@@ -15,8 +18,10 @@ public class PropertyAssertsTests
             var ex1 = Assert.Throws<ArgumentNullException>(() => Assert.PropertyChanged(null, "propertyName", delegate { }));
             Assert.Equal("object", ex1.ParamName);
 
+#if NET452
             var ex2 = Assert.Throws<ArgumentNullException>(() => Assert.PropertyChanged(Substitute.For<INotifyPropertyChanged>(), "propertyName", (Action)null));
             Assert.Equal("testCode", ex2.ParamName);
+#endif
         }
 
         [Fact]
@@ -87,8 +92,10 @@ public class PropertyAssertsTests
             var ex1 = await Assert.ThrowsAsync<ArgumentNullException>(() => Assert.PropertyChangedAsync(null, "propertyName", async delegate { }));
             Assert.Equal("object", ex1.ParamName);
 
+#if NET452
             var ex2 = await Assert.ThrowsAsync<ArgumentNullException>(() => Assert.PropertyChangedAsync(Substitute.For<INotifyPropertyChanged>(), "propertyName", null));
             Assert.Equal("testCode", ex2.ParamName);
+#endif
         }
 
         [Fact]

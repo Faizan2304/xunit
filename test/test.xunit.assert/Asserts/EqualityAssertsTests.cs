@@ -89,7 +89,7 @@ public class EqualityAssertsTests
             {
                 if (obj is int)
                 {
-                    return Value.CompareTo(obj);
+                    return Value.CompareTo((int)obj);
                 }
                 else if (obj is MultiComparable)
                 {

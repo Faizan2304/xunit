@@ -16,13 +16,15 @@
     <TrackFileAccess>false</TrackFileAccess>
     <SolutionDir Condition="'$(SolutionDir)' == '' Or '$(SolutionDir)' == '*Undefined*'">$(MSBuildProjectDirectory)</SolutionDir>
     <NuGetExePath Condition="'$(NuGetExePath)' == ''">$(SolutionDir)\.nuget\nuget.exe</NuGetExePath>
+    <NuGetRepositoryPath Condition="'$(NuGetRepositoryPath)' == ''">$(HOME)\.nuget\packages</NuGetRepositoryPath>
     <RequestedVerbosity Condition=" '$(RequestedVerbosity)' == '' ">normal</RequestedVerbosity>
     <MyGetUrl Condition="'$(MyGetUrl)' == ''">https://www.myget.org/F/xunit/api/v2/package</MyGetUrl>
     <MyGetSymbolsUrl Condition="'$(MyGetSymbolsUrl)' == ''">https://www.myget.org/F/xunit/symbols/api/v2/package</MyGetSymbolsUrl>
   </PropertyGroup>
   <ItemGroup>
     <NuspecFiles
-        Include="src\xunit.assert.source.nuspec;
+        Include="src\dotnet-xunit.nuspec;
+                 src\xunit.assert.source.nuspec;
                  src\xunit.core.nuspec;
                  src\xunit.nuspec" />
     <NuspecFilesWithSymbols
@@ -39,8 +41,10 @@
   <!-- Meta targets -->
 
   <Target Name="Build" DependsOnTargets="PackageRestore;_Build" />
+  <Target Name="Packages" DependsOnTargets="Build;_Packages" />
   <Target Name="Test32" DependsOnTargets="Build;_Test32" />
   <Target Name="Test64" DependsOnTargets="Build;_Test64" />
+  <Target Name="TestNetCore" DependsOnTargets="Packages;_TestNetCore" />
   <Target Name="Test" DependsOnTargets="Test32;Test64" />
   <Target Name="CI" DependsOnTargets="DisableParallelization;Clean;PackageRestore;SetVersionNumber;Test;Packages;ZipArtifacts" />
   <Target Name="TeamCity" DependsOnTargets="CI;PushMyGet" />
@@ -76,10 +80,6 @@
     <MSBuild Projects="$(SolutionName)" Properties="Configuration=$(Configuration)" Targets="restore" />
     <MSBuild Projects="$(SolutionName)" Properties="Configuration=$(Configuration)" Targets="build" />
     <MSBuild Projects="src\xunit.console\xunit.console.csproj" Properties="Configuration=$(Configuration)_x86" Targets="build" />
-    <RegexReplace
-        Pattern="type=&quot;Xunit.ConsoleClient.XunitConsoleConfigurationSection, xunit.console&quot;"
-        Replacement="type=&quot;Xunit.ConsoleClient.XunitConsoleConfigurationSection, xunit.console.x86&quot;"
-        Files="src\xunit.console\bin\$(Configuration)_x86\net452\win7-x86\xunit.console.x86.exe.config" />
   </Target>
 
   <Target Name="_Test32">
@@ -98,6 +98,17 @@
     <Exec Command="src\xunit.console\bin\$(Configuration)\net452\win7-x86\xunit.console.exe @(Test64Assemblies->'%(Identity)', ' ')                     $(ParallelizationSwitch) -serialize -xml TestResults-v2-x64.xml -html TestResults-v2-x64.html" />
   </Target>
 
+  <Target Name="_TestNetCore">
+    <PropertyGroup>
+      <PackageSemanticVersion Condition="'$(PackageSemanticVersion)' == ''">$(BuildSemanticVersion)</PackageSemanticVersion>
+      <PackageSemanticVersion Condition="'$(PackageSemanticVersion)' == ''">99.99.99-dev</PackageSemanticVersion>
+    </PropertyGroup>
+    <RemoveDir Directories="$(NuGetRepositoryPath)\dotnet-xunit\$(PackageSemanticVersion)" />
+    <Exec Command="&quot;$(NuGetExePath)&quot; add dotnet-xunit.$(PackageSemanticVersion).nupkg -Source &quot;$(NuGetRepositoryPath)&quot; -Expand" />
+    <Exec Command="dotnet restore" WorkingDirectory="test\test.dotnet-xunit" />
+    <Exec Command="dotnet xunit" WorkingDirectory="test\test.dotnet-xunit" />
+  </Target>
+
   <Target Name="SetVersionNumber">
     <RegexReplace
         Pattern='AssemblyVersion\("99\.99\.99\.0"\)'
@@ -111,15 +122,20 @@
         Condition=" '$(BuildSemanticVersion)' != '' "/>
   </Target>
 
-  <Target Name='Packages'>
+  <Target Name='_Packages'>
     <!-- Delete all the obj folders before packing things -->
     <ItemGroup>
       <ObjSourceFiles Include='**\obj\**\*.cs' />
     </ItemGroup>
     <Delete Files='@(ObjSourceFiles)' />
 
-    <Exec Command='"$(NuGetExePath)" pack %(NuspecFiles.Identity) -NonInteractive -Verbosity quiet' />
-    <Exec Command='"$(NuGetExePath)" pack %(NuspecFilesWithSymbols.Identity) -Symbols -NonInteractive -Verbosity quiet' />
+    <Message Text="Publishing .NET Core artifacts" Importance="High" />
+    <Exec Command='dotnet publish src\dotnet-xunit  --configuration $(Configuration) --framework netcoreapp1.0 /nologo' />
+    <Exec Command='dotnet publish src\xunit.console --configuration $(Configuration) --framework netcoreapp1.0 /nologo' />
+
+    <Message Text="Building NuGet packages" Importance="High" />
+    <Exec Command='"$(NuGetExePath)" pack %(NuspecFiles.Identity) -NonInteractive -NoPackageAnalysis -Verbosity quiet' />
+    <Exec Command='"$(NuGetExePath)" pack %(NuspecFilesWithSymbols.Identity) -Symbols -NonInteractive -NoPackageAnalysis -Verbosity quiet' />
   </Target>
 
   <Target Name='ZipArtifacts'>

@@ -2,9 +2,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using NSubstitute;
 using Xunit;
 using Xunit.Sdk;
+
+#if NET452
+using NSubstitute;
+#endif
 
 public class CollectionAssertsTests
 {
@@ -166,6 +169,7 @@ public class CollectionAssertsTests
 
     public class Contains_WithComparer
     {
+#if NET452
         [Fact]
         public static void GuardClauses()
         {
@@ -174,6 +178,7 @@ public class CollectionAssertsTests
             Assert.Throws<ArgumentNullException>("collection", () => Assert.Contains(14, (List<int>)null, comparer));
             Assert.Throws<ArgumentNullException>("comparer", () => Assert.Contains(14, new int[0], null));
         }
+#endif
 
         [Fact]
         public static void CanUseComparer()
@@ -271,6 +276,7 @@ public class CollectionAssertsTests
 
     public class DoesNotContain_WithComparer
     {
+#if NET452
         [Fact]
         public static void GuardClauses()
         {
@@ -279,6 +285,7 @@ public class CollectionAssertsTests
             Assert.Throws<ArgumentNullException>("collection", () => Assert.DoesNotContain(14, (List<int>)null, comparer));
             Assert.Throws<ArgumentNullException>("comparer", () => Assert.DoesNotContain(14, new int[0], null));
         }
+#endif
 
         [Fact]
         public static void CanUseComparer()
@@ -652,6 +659,7 @@ public class CollectionAssertsTests
             Assert.Throws<ArgumentNullException>(() => Assert.Single(null));
         }
 
+#if NET452
         [Fact]
         public static void EmptyCollectionThrows()
         {
@@ -693,6 +701,7 @@ public class CollectionAssertsTests
 
             Assert.Equal("Hello", result);
         }
+#endif
     }
 
     public class Single_NonGeneric_WithObject
